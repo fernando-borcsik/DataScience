@@ -1,0 +1,47 @@
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+
+# Abrir o DataFrame de Treino
+df = pd.read_csv('treino.csv')
+
+# Não embuti as plotagens aqui no código, pois minha análise foi feita no jupyter notebook, como comando %matplotlib inline. Com o heatmap abaixo, mapeei as entradas nulas, para ter uma noção da quantidade de informações faltantes.
+
+# Eliminar linhas com valores nulos
+dfna = df.dropna()
+
+#Eliminar linhas com util_linhas_inseguras > 1 (Impossível ser maior que 100%)
+drop_util = dfna[dfna['util_linhas_inseguras']>1].index
+dfclean = dfna.drop(drop_util)
+
+#Separação para treino
+X = dfclean.drop('inadimplente', axis=1)
+y = dfclean['inadimplente']
+
+#Aqui optei por utilizar uma random forest. No jupyter notebook testei KNN, trees e SVM com GridSearch, porém comparando a confiabilidade das classificações com classification reports, RandomForest apresentou a maior confiabilidade. 
+rfc = RandomForestClassifier(n_estimators=1000, verbose=3)
+rfc.fit(X, y)
+
+test = pd.read_csv('teste.csv')
+
+def imput_sal(sal):
+    if pd.isnull(sal):
+        return test['salario_mensal'].mean()
+    else:
+        return sal
+
+def imput_dep(dep):
+    if pd.isnull(dep):
+        return np.rint(test['numero_de_dependentes'].mean())
+    else:
+        return dep
+
+test['salario_mensal'] = test['salario_mensal'].apply(imput_sal)
+test['numero_de_dependentes'] = test['numero_de_dependentes'].apply(imput_dep)
+
+pred = rfc.predict(test)
+test['inadimplente'] = pred
+
+test.to_csv('teste.csv')
+
+
